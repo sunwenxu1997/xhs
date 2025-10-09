@@ -13,7 +13,7 @@ export class AuthController {
       return {
         success: true,
         data: data,
-        message: '获取 token 成功',
+        message: '获取 token成功',
       };
     } catch (error) {
       return {
