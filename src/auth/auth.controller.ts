@@ -9,10 +9,10 @@ export class AuthController {
   @Get('token')
   async getAccessToken() {
     try {
-      const token = await this.authService.getAccessToken();
+      const data = await this.authService.getAccessToken();
       return {
         success: true,
-        data: { access_token: token },
+        data: data,
         message: '获取 token 成功',
       };
     } catch (error) {

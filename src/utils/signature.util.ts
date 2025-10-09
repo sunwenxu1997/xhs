@@ -78,12 +78,3 @@ export class SignatureUtil {
     return Date.now().toString();
   }
 }
-
-// 测试用例
-// const testSignature = SignatureUtil.buildSignature(
-//   '123',
-//   'nonce',
-//   '1692102691696',
-//   'test'
-// );
-// console.log('Test Signature:', testSignature);

@@ -6,11 +6,19 @@ import { SignatureUtil } from '../utils/signature.util';
 
 // 定义 access_token 响应的接口
 interface TokenResponse {
-  data: { access_token: any; expires_in: any; };
+  data: { access_token: any; expires_in: any };
   code: number;
   msg: string;
   success: boolean;
   // 其他可能的字段
+}
+
+// 定义返回对象的接口
+export interface AuthTokenResult {
+  appKey: string;
+  nonce: string;
+  timestamp: string;
+  signature: string;
 }
 
 @Injectable()
@@ -28,11 +36,11 @@ export class AuthService {
    * 获取有效的 access_token
    * 优先使用缓存的 token，如果过期则重新获取
    */
-  async getAccessToken(): Promise<string> {
+  async getAccessToken(): Promise<AuthTokenResult> {
     // 检查缓存的 token 是否有效
-    if (this.cachedToken && this.tokenExpiry > Date.now()) {
-      return this.cachedToken;
-    }
+    // if (this.cachedToken && this.tokenExpiry > Date.now()) {
+    //   return this.cachedToken;
+    // }
 
     // 缓存无效，重新获取
     return this.fetchNewAccessToken();
@@ -41,7 +49,7 @@ export class AuthService {
   /**
    * 从第三方接口获取新的 access_token
    */
-  private async fetchNewAccessToken(): Promise<string> {
+  private async fetchNewAccessToken(): Promise<AuthTokenResult> {
     try {
       // 获取配置
       const appKey = this.configService.get<string>('THIRD_PARTY_CLIENT_ID')!;
@@ -60,32 +68,51 @@ export class AuthService {
         timestamp,
         appSecret,
       );
-      this.logger.log(signature);
+      //   this.logger.log(appKey);
+      //   this.logger.log(nonce);
+      //   this.logger.log(timestamp);
+      //   this.logger.log(signature);
       // 根据第三方要求添加其他参数
 
       // 发送请求
       const response = await firstValueFrom(
-        this.httpService.post<TokenResponse>(tokenUrl, {
+        this.httpService.post<TokenResponse>(
+          tokenUrl,
+          {
             app_key: appKey,
             nonce: nonce,
             timestamp: timestamp,
             signature: signature,
-        }, {
-          headers: {
-            'Content-Type': 'application/json',
           },
-        }),
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          },
+        ),
       );
 
       // 处理响应
       const { access_token, expires_in } = response.data.data;
 
       // 缓存 token 并设置过期时间（提前 60 秒过期以避免边缘情况）
-      this.cachedToken = access_token;
-      this.tokenExpiry = Date.now() + (expires_in - 60) * 1000;
+      //   this.cachedToken = access_token;
+      //   this.tokenExpiry = Date.now() + (expires_in - 60) * 1000;
       this.logger.log(response.data);
       this.logger.log('Successfully fetched new access token');
-      return access_token;
+      //   第二次加签 appKey+nonce+timestamp+access_token
+      const signatureEnd = SignatureUtil.buildSignature(
+        appKey,
+        nonce,
+        timestamp,
+        access_token,
+      );
+      return {
+        appKey,
+        nonce,
+        timestamp,
+        signature: signatureEnd,
+      };
     } catch (error) {
       this.logger.error('Failed to fetch access token', error.stack);
       throw new Error(
